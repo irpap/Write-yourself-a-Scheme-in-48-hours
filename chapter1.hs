@@ -1,7 +1,7 @@
 module Main where
-import System.Environment
 
 main :: IO()
 main = do
-    args <- getArgs
-    putStrLn(show (read (args !! 0)  + read (args !! 1)))
+    putStr("Hello! What's your name? ")
+    name <- getLine
+    putStrLn("Wow. " ++ name ++ " is certainly the best name I've ever heard!")
