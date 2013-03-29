@@ -9,7 +9,32 @@ data LispVal = Atom String
                 | Number Integer
                 | String String
                 | Bool Bool
-                
+                | Char Char
+                deriving (Eq, Show)
+main :: IO()
+main = do 
+    args <- getArgs
+    putStrLn(readExpr $ args !! 0)
+
+parseExpr :: Parser LispVal
+parseExpr = try parseNumber
+            <|> parseAtom
+            <|> parseString
+
+readExpr :: String -> String
+readExpr input = case parse parseExpr "lisp" input of
+    Left err ->"No match: " ++ show err
+    Right val -> "Found value: " ++  show val
+
+parseAtom :: Parser LispVal
+parseAtom = do 
+                first <- letter <|> symbol
+                rest <- many (letter <|> digit <|> symbol)
+                let atom = first:rest
+                return $ case atom of
+                            "#t" -> Bool True
+                            "#f" -> Bool False
+                            _    -> Atom atom
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
@@ -31,15 +56,6 @@ parseString = do
                   char '"'
                   return $ String x
 
-parseAtom :: Parser LispVal
-parseAtom = do 
-                first <- letter <|> symbol
-                rest <- many (letter <|> digit <|> symbol)
-                let atom = first:rest
-                return $ case atom of
-                            "#t" -> Bool True
-                            "#f" -> Bool False
-                            _    -> Atom atom
 
 parseNumber :: Parser LispVal
 parseNumber = readPlainNumber <|> parseNumberInBase
@@ -68,17 +84,3 @@ readNumberInBase digits base = do
 toDecimal :: String -> Integer -> Integer
 toDecimal s base  = ( foldl1 ((+) . (* base)) ( map  (toInteger . digitToInt) s ))
 
-parseExpr :: Parser LispVal
-parseExpr = parseAtom 
-            <|> parseString
-            <|> parseNumber
-
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
-    Left err ->"No match: " ++ show err
-    Right val -> "Found value"
-
-main :: IO()
-main = do 
-    args <- getArgs
-    putStrLn(readExpr $ args !! 0)
