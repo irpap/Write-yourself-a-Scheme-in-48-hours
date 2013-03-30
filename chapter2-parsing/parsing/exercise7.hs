@@ -4,14 +4,14 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Numeric
 import Data.Ratio
+import Data.Complex
 
-type Complex = (Integer, Integer)
 data LispVal = Atom String
                 | List [LispVal]
                 | DottedList [LispVal] LispVal
                 | Number Integer
                 | Float Double
-                | Complex Complex
+                | Complex  (Complex Double)
                 | Rational Rational
                 | String String
                 | Bool Bool
@@ -23,8 +23,8 @@ main = do
     putStrLn(readExpr $ args !! 0)
 
 parseExpr :: Parser LispVal
-parseExpr = try parseFloat
-            <|> try parseComplexNumber
+parseExpr = try parseComplexNumber
+            <|> try parseFloat 
             <|> try parseRationalNumber
             <|> try parseNumber
             <|> try parseChar
@@ -37,11 +37,14 @@ readExpr input = case parse parseExpr "lisp" input of
     Right val -> "Found value: " ++  show val
 
 parseComplexNumber :: Parser LispVal
-parseComplexNumber = do realPart <- many digit
+parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
                         char '+'
-                        imaginaryPart <- many digit
+                        imaginaryPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
                         char 'i'
-                        return $ Complex (read realPart :: Integer , read imaginaryPart :: Integer)
+                        return $ Complex (realPart :+ imaginaryPart)
+                            where toDouble (Float x) = x
+                                  toDouble (Number x) = fromInteger x :: Double 
+                                                    
 
 parseRationalNumber :: Parser LispVal
 parseRationalNumber = do numerator <- many digit
