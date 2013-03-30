@@ -19,9 +19,10 @@ main = do
     putStrLn(readExpr $ args !! 0)
 
 parseExpr :: Parser LispVal
-parseExpr = try parseNumber
+parseExpr =
+            try parseFloat
+            <|> try parseNumber
             <|> try  parseChar
-            <|> try parseFloat
             <|> parseAtom
             <|> parseString
 
