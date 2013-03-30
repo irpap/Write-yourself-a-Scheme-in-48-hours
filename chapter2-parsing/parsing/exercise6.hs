@@ -19,8 +19,7 @@ main = do
     putStrLn(readExpr $ args !! 0)
 
 parseExpr :: Parser LispVal
-parseExpr =
-            try parseFloat
+parseExpr = try parseFloat
             <|> try parseNumber
             <|> try  parseChar
             <|> parseAtom
@@ -35,7 +34,7 @@ parseFloat :: Parser LispVal
 parseFloat = do whole <- many digit
                 char '.'
                 decimal <- many digit
-                return $ Float $ fst $ head $ (readFloat (whole ++ "." ++ decimal)) 
+                return $ Float (read (whole ++ "." ++ decimal) :: Double)
 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
