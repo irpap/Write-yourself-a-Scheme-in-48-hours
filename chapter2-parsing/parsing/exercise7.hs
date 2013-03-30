@@ -3,6 +3,7 @@ import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Numeric
+import Data.Ratio
 
 type Complex = (Integer, Integer)
 data LispVal = Atom String
@@ -11,6 +12,7 @@ data LispVal = Atom String
                 | Number Integer
                 | Float Double
                 | Complex Complex
+                | Rational Rational
                 | String String
                 | Bool Bool
                 | Char Char
@@ -23,6 +25,7 @@ main = do
 parseExpr :: Parser LispVal
 parseExpr = try parseFloat
             <|> try parseComplexNumber
+            <|> try parseRationalNumber
             <|> try parseNumber
             <|> try parseChar
             <|> parseAtom
@@ -40,6 +43,12 @@ parseComplexNumber = do realPart <- many digit
                         char 'i'
                         return $ Complex (read realPart :: Integer , read imaginaryPart :: Integer)
 
+parseRationalNumber :: Parser LispVal
+parseRationalNumber = do numerator <- many digit
+                         char '/'
+                         denominator <- many digit
+                         return $ Rational (read (numerator ++ "%" ++ denominator) :: Rational)
+                    
 parseFloat :: Parser LispVal
 parseFloat = do whole <- many digit
                 char '.'
