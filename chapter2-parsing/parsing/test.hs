@@ -1,7 +1,13 @@
-import Test.HUnit
+module Main where
+
 import Data.Char
 import Data.Complex
 import SchemeParser
+import Test.HUnit
 
-testParsingComplex = TestCase $ assertEqual "tests parsing a complex number" (readExpr "3.32+5i") "Found value: Complex (3.32 :+ 5.0)"
+main = runTestTT $ test tests
 
+tests :: [Test]
+tests = [
+    TestCase $ assertEqual "tests parsing a complex number" (readExpr "3.32+5i") "Complex (3.32 :+ 5.0)",
+    TestCase $ assertEqual "tests parsing a rational number" (readExpr "6/2") "Rational (3 % 1)"]
