@@ -1,7 +1,8 @@
+module SchemeParser (LispVal (..), readExpr) where
+
 import Data.Char
 import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
-import System.Environment
 import Numeric
 import Data.Ratio
 import Data.Complex
@@ -17,10 +18,6 @@ data LispVal = Atom String
                 | Bool Bool
                 | Char Char
                 deriving (Eq, Show)
-main :: IO()
-main = do 
-    args <- getArgs
-    putStrLn(readExpr $ args !! 0)
 
 parseExpr :: Parser LispVal
 parseExpr = try parseComplexNumber
@@ -34,7 +31,7 @@ parseExpr = try parseComplexNumber
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
     Left err ->"No match: " ++ show err
-    Right val -> "Found value: " ++  show val
+    Right val -> show val
 
 parseComplexNumber :: Parser LispVal
 parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
