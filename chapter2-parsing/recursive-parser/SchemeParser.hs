@@ -20,18 +20,18 @@ data LispVal = Atom String
                 deriving (Eq, Show)
 
 parseExpr :: Parser LispVal
-parseExpr = try parseComplexNumber
-            <|> try parseFloat 
-            <|> try parseRationalNumber
-            <|> try parseNumber
-            <|> try parseChar
-            <|> parseAtom
-            <|> parseString
-            <|> parseQuoted
-            <|> do  char '('
-                    x <- try parseDottedList <|> parseList
-                    char ')'
-                    return x
+parseExpr = parseAtom
+          <|> parseString
+          <|> try parseChar
+          <|> try parseComplexNumber
+          <|> try parseFloat
+          <|> try parseRationalNumber
+          <|> try parseNumber
+          <|> parseQuoted
+          <|> do char '('
+                 x <- try parseList <|> parseDottedList
+                 char ')'
+                 return x
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
@@ -39,8 +39,7 @@ readExpr input = case parse parseExpr "lisp" input of
     Right val -> show val
 
 parseList :: Parser LispVal
-parseList = liftM List $ sepBy parseExpr spaces
-
+parseList = fmap List $ sepBy parseExpr spaces
 
 parseDottedList :: Parser LispVal
 parseDottedList = do
@@ -71,10 +70,10 @@ parseRationalNumber = do numerator <- many digit
                          return $ Rational (read (numerator ++ "%" ++ denominator) :: Rational)
                     
 parseFloat :: Parser LispVal
-parseFloat = do whole <- many digit
+parseFloat = do whole <- many1 digit
                 char '.'
-                decimal <- many digit
-                return $ Float (read (whole ++ "." ++ decimal) :: Double)
+                decimal <- many1 digit
+                return $ Float (read (whole ++ "." ++ decimal))
 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
