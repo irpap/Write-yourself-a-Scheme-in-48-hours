@@ -4,12 +4,14 @@ import Data.Char
 import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric
-import Data.Ratio
+import Data.Array
 import Data.Complex
+import Data.Ratio
 
 data LispVal = Atom String
                 | List [LispVal]
                 | DottedList [LispVal] LispVal
+                | Vector (Array Int LispVal)
                 | Number Integer
                 | Float Double
                 | Complex  (Complex Double)
@@ -20,16 +22,18 @@ data LispVal = Atom String
                 deriving (Eq, Show)
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom
-          <|> parseString
+parseExpr =  parseString
+          <|> parseVector
+          <|> parseAtom
           <|> try parseChar
           <|> try parseComplexNumber
           <|> try parseFloat
           <|> try parseRationalNumber
           <|> try parseNumber
+
           <|> parseQuoted
           <|> parseQuasiQuoted
-          <|> parseUnQuote
+          <|> try parseUnQuote
           <|> do char '('
                  x <- try parseList <|> parseDottedList
                  char ')'
@@ -42,6 +46,12 @@ readExpr input = case parse parseExpr "lisp" input of
 
 parseList :: Parser LispVal
 parseList = fmap List $ sepBy parseExpr spaces
+
+parseVector :: Parser LispVal
+parseVector = do string "#("
+                 elems <- sepBy parseExpr spaces
+                 char ')'
+                 return $ Vector (listArray (0, (length elems)-1) elems)
 
 parseDottedList :: Parser LispVal
 parseDottedList = do
