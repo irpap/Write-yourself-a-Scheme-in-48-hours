@@ -47,22 +47,13 @@ parseVector = do string "#("
                  return $ Vector (listArray (0, (length elems)-1) elems)
 
 parseAllTheLists ::Parser LispVal
-parseAllTheLists = do  char '(' >> spaces
-                       head <- parseExpr `sepEndBy` spaces1
-                       do char '.' >> spaces1
+parseAllTheLists = do char '(' >> spaces
+                      head <- sepEndBy parseExpr spaces1
+                      do  char '.' >> spaces1
                           tail <- parseExpr
                           spaces >> char ')'
                           return $ DottedList head tail
-                        <|> (spaces >> char ')' >> (return $ List head))
-
-parseList :: Parser LispVal
-parseList = fmap List $ sepBy parseExpr spaces1
-
-parseDottedList :: Parser LispVal
-parseDottedList = do
-        head <- endBy parseExpr spaces1
-        tail <- char '.' >> spaces1 >> parseExpr
-        return $ DottedList head tail
+                          <|> (spaces >> char ')' >> (return $ List head))
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
