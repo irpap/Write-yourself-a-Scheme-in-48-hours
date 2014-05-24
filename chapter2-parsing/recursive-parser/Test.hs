@@ -10,6 +10,11 @@ main = runTestTT $ test tests
 tests :: Test
 tests = TestList $ map TestCase [
           assertEqual
+          "parsing a number"
+          "Number 33"
+          (readExpr "33")
+          ,
+          assertEqual
           "parsing a complex number"
           "Complex (3.32 :+ 5.0)"
           (readExpr "3.32+5i")
@@ -26,8 +31,8 @@ tests = TestList $ map TestCase [
           ,
           assertEqual
           "parsing a dotted list"
-          "List [Atom \"a\",DottedList [Atom \"dotted\"] (Atom \"list\"),Atom \"test\"]"
-          (readExpr "(a (dotted . list) test)")
+          "DottedList [Number 1] (DottedList [Number 2] (DottedList [Number 3] (Atom \"nil\")))"
+          (readExpr "(1 . (2 . (3 . nil)))")
           ,
           assertEqual
           "parsing a quasiquoted expr"
