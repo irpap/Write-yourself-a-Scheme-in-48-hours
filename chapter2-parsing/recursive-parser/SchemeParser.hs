@@ -2,7 +2,7 @@ module SchemeParser (LispVal (..), readExpr) where
 
 import Data.Char
 import Control.Monad
-import Text.ParserCombinators.Parsec hiding (spaces)
+import Text.ParserCombinators.Parsec hiding (spaces1)
 import Numeric
 import Data.Array
 import Data.Complex
@@ -25,38 +25,43 @@ parseExpr :: Parser LispVal
 parseExpr =  parseString
           <|> parseVector
           <|> parseAtom
-          <|> try parseChar
+          <|> parseChar
           <|> try parseComplexNumber
           <|> try parseFloat
           <|> try parseRationalNumber
-          <|> try parseNumber
-
+          <|> parseNumber
           <|> parseQuoted
           <|> parseQuasiQuoted
-          <|> try parseUnQuote
-          <|> do char '('
-                 x <- try parseList <|> parseDottedList
-                 char ')'
-                 return x
+          <|> parseUnQuote
+          <|> parseAllTheLists
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
     Left err ->"No match: " ++ show err
     Right val -> show val
 
-parseList :: Parser LispVal
-parseList = fmap List $ sepBy parseExpr spaces
-
 parseVector :: Parser LispVal
 parseVector = do string "#("
-                 elems <- sepBy parseExpr spaces
+                 elems <- sepBy parseExpr spaces1
                  char ')'
                  return $ Vector (listArray (0, (length elems)-1) elems)
 
+parseAllTheLists ::Parser LispVal
+parseAllTheLists = do  char '(' >> spaces
+                       head <- parseExpr `sepEndBy` spaces1
+                       do char '.' >> spaces1
+                          tail <- parseExpr
+                          spaces >> char ')'
+                          return $ DottedList head tail
+                        <|> (spaces >> char ')' >> (return $ List head))
+
+parseList :: Parser LispVal
+parseList = fmap List $ sepBy parseExpr spaces1
+
 parseDottedList :: Parser LispVal
 parseDottedList = do
-        head <- endBy parseExpr spaces
-        tail <- char '.' >> spaces >> parseExpr
+        head <- endBy parseExpr spaces1
+        tail <- char '.' >> spaces1 >> parseExpr
         return $ DottedList head tail
 
 parseQuoted :: Parser LispVal
@@ -110,8 +115,8 @@ parseAtom = do first <- letter <|> symbol
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
-spaces :: Parser ()
-spaces = skipMany1 space
+spaces1 :: Parser ()
+spaces1 = skipMany1 space
 
 parseChar :: Parser LispVal
 parseChar = do string "#\\"
