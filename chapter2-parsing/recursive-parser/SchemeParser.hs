@@ -28,6 +28,8 @@ parseExpr = parseAtom
           <|> try parseRationalNumber
           <|> try parseNumber
           <|> parseQuoted
+          <|> parseQuasiQuoted
+          <|> parseUnQuote
           <|> do char '('
                  x <- try parseList <|> parseDottedList
                  char ')'
@@ -53,6 +55,18 @@ parseQuoted = do
         x <- parseExpr
         return $ List [Atom "quote", x]
 
+parseQuasiQuoted :: Parser LispVal
+parseQuasiQuoted = do
+   char '`'
+   x <- parseExpr
+   return $ List [Atom "quasiquote", x]
+
+parseUnQuote :: Parser LispVal
+parseUnQuote = do
+   char ','
+   x <- parseExpr
+   return $ List [Atom "unquote", x]
+
 parseComplexNumber :: Parser LispVal
 parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
                         char '+'
@@ -60,15 +74,15 @@ parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPla
                         char 'i'
                         return $ Complex (realPart :+ imaginaryPart)
                             where toDouble (Float x) = x
-                                  toDouble (Number x) = fromInteger x :: Double 
-                                                    
+                                  toDouble (Number x) = fromInteger x :: Double
+
 
 parseRationalNumber :: Parser LispVal
 parseRationalNumber = do numerator <- many digit
                          char '/'
                          denominator <- many digit
                          return $ Rational (read (numerator ++ "%" ++ denominator) :: Rational)
-                    
+
 parseFloat :: Parser LispVal
 parseFloat = do whole <- many1 digit
                 char '.'
@@ -98,7 +112,7 @@ parseChar = do string "#\\"
                    [x] -> Char x
 
 escapedChar :: Parser Char
-escapedChar = char '\\' >> oneOf("\"nrt\\") >>= \c -> 
+escapedChar = char '\\' >> oneOf("\"nrt\\") >>= \c ->
                             return $ case c of
                                     '\\' -> '\\'
                                     'n' -> '\n'
@@ -120,22 +134,22 @@ readPlainNumber = do
                     return $ Number . read $ d
 
 parseRadixNumber :: Parser LispVal
-parseRadixNumber = char '#' >> 
+parseRadixNumber = char '#' >>
                     ((char 'd' >> readPlainNumber)
                      <|> (char 'b' >> readBinaryNumber)
                      <|> (char 'o' >> readOctalNumber)
                      <|> (char 'x' >> readHexNumber))
 
-readBinaryNumber = readNumberInBase "01" 2 
+readBinaryNumber = readNumberInBase "01" 2
 readOctalNumber = readNumberInBase "01234567" 8
 readHexNumber = readNumberInBase "0123456789abcdefABCEDF" 16
 
 readNumberInBase :: String -> Integer -> Parser LispVal
-readNumberInBase digits base = do 
+readNumberInBase digits base = do
                     d <- many (oneOf (digits))
                     return $ Number $ toDecimal base d
 
 toDecimal :: Integer -> String -> Integer
 toDecimal base s = foldl1 ((+) . (* base)) $ map toNumber s
-                    where toNumber  =  (toInteger . digitToInt)  
+                    where toNumber  =  (toInteger . digitToInt)
 
