@@ -7,6 +7,8 @@ import Numeric
 import Data.Array
 import Data.Complex
 import Data.Ratio
+import System.Environment
+
 
 data LispVal = Atom String
                 | List [LispVal]
@@ -35,10 +37,14 @@ parseExpr =  parseString
           <|> parseUnQuote
           <|> parseAllTheLists
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-    Left err ->"No match: " ++ show err
-    Right val -> show val
+    Left err -> String $ "No match: " ++ show err
+    Right val -> val
+
+main = do
+    args <- getArgs
+    putStrLn(show $ readExpr $ args !! 0)
 
 parseVector :: Parser LispVal
 parseVector = do string "#("
@@ -75,10 +81,13 @@ parseUnQuote = do
 
 parseComplexNumber :: Parser LispVal
 parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
-                        char '+'
+                        sign <- char '+' <|> char '-'
                         imaginaryPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
+                        let signedImaginaryPart = case sign of
+                                                    '+' -> imaginaryPart
+                                                    '-' -> negate imaginaryPart
                         char 'i'
-                        return $ Complex (realPart :+ imaginaryPart)
+                        return $ Complex (realPart :+ signedImaginaryPart)
                             where toDouble (Float x) = x
                                   toDouble (Number x) = fromInteger x :: Double
 
