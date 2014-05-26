@@ -50,14 +50,9 @@ tests = TestList $ map TestCase [
           (show $ readExpr "(+ 42 (- 7 3))")
           ,
           assertEqual
-          "add three numbers, some quoted"
-          "34"
-          (show $ readExpr "(+ \"23\" 7 \"4\")")
-          ,
-          assertEqual
-          "Non numeric strigs are treated as zero"
-          "7"
-          (show $ readExpr "(+ \"haha\" 7)")
+          "Strings are treated as zero"
+          "11"
+          (show $ readExpr "(+ \"23\" 7 4 \"haha\")")
           ,
           assertEqual
           "Symbol? recognises a symbol"

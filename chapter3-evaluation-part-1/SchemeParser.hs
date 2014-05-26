@@ -85,7 +85,9 @@ primitives = [("+", numericBinop (+)),
               ("string?" , unaryOp stringp),
               ("number?" , unaryOp numberp),
               ("bool?", unaryOp boolp),
-              ("list?" , unaryOp listp)
+              ("list?" , unaryOp listp),
+              ("symbol->string", unaryOp symbol2string),
+              ("string->symbol", unaryOp string2symbol)
               ]
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
@@ -94,10 +96,7 @@ numericBinop f args = Number $ foldl1 f (unpackList args)
 
 unpackNumber :: LispVal -> Integer
 unpackNumber (Number a) = a
-unpackNumber (String s) = let parsed = reads s :: [(Integer, String)] in
-                           case parsed of
-                              [] -> 0
-                              _ -> fst . head $ parsed
+unpackNumber _ = 0
 
 unpackList :: [LispVal] -> [Integer]
 unpackList = map unpackNumber
@@ -111,7 +110,7 @@ parseVector = do string "#("
 unaryOp :: (LispVal -> LispVal) -> [LispVal] -> LispVal
 unaryOp f [v] = f v
 
-symbolp, numberp, stringp, boolp, listp :: LispVal -> LispVal
+symbolp, numberp, stringp, boolp, listp, string2symbol, symbol2string :: LispVal -> LispVal
 symbolp (Atom _) = Bool True
 symbolp _ = Bool False
 
@@ -127,6 +126,12 @@ boolp   _          = Bool False
 listp   (List _)   = Bool True
 listp   (DottedList _ _) = Bool True
 listp   _          = Bool False
+
+string2symbol (String x) = Atom x
+string2symbol _ = Atom ""
+
+symbol2string (Atom x) = String x
+symbol2string _ = String ""
 
 parseAllTheLists ::Parser LispVal
 parseAllTheLists = do char '(' >> spaces
