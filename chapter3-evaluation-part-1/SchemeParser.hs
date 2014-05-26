@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -XOverlappingInstances -XTypeSynonymInstances #-}
-
 module SchemeParser (LispVal (..), readExpr) where
 
 import Data.Char
@@ -9,6 +7,7 @@ import Numeric
 import Data.Array
 import Data.Complex
 import Data.Ratio
+import System.Environment
 
 data LispVal = Atom String
                 | List [LispVal]
@@ -21,7 +20,7 @@ data LispVal = Atom String
                 | String String
                 | Bool Bool
                 | Char Char
-                deriving (Eq)
+                deriving Eq
 
 instance Show LispVal where show = showVal
 
@@ -37,8 +36,6 @@ showVal (Bool False) = "#f"
 showVal (List contents) = "(" ++ unwordsList contents ++ ")"
 showVal (Vector arr) = "(" ++ unwordsList (elems arr) ++ ")"
 showVal (DottedList head tail) = "(" ++ unwordsList head ++ "." ++ showVal tail ++ ")"
-
-
 
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
@@ -62,6 +59,9 @@ readExpr input = case parse parseExpr "lisp" input of
     Left err -> String $ "No match: " ++ show err
     Right val -> eval val
 
+main = getArgs >>= print . readExpr . head
+
+
 eval :: LispVal -> LispVal
 eval val@(String _) = val
 eval val@(Number _) = val
@@ -80,20 +80,53 @@ primitives = [("+", numericBinop (+)),
               ("/", numericBinop div),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
-              ("remainder", numericBinop rem)]
+              ("remainder", numericBinop rem),
+              ("symbol?", unaryOp symbolp),
+              ("string?" , unaryOp stringp),
+              ("number?" , unaryOp numberp),
+              ("bool?", unaryOp boolp),
+              ("list?" , unaryOp listp)
+              ]
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
-numericBinop f args = Number $ foldl1 f (unpack args)
+numericBinop f args = Number $ foldl1 f (unpackList args)
 
-unpack :: [LispVal]  -> [Integer]
-unpack = map (\val@(Number a) -> a)
 
+unpackNumber :: LispVal -> Integer
+unpackNumber (Number a) = a
+unpackNumber (String s) = let parsed = reads s :: [(Integer, String)] in
+                           case parsed of
+                              [] -> 0
+                              _ -> fst . head $ parsed
+
+unpackList :: [LispVal] -> [Integer]
+unpackList = map unpackNumber
 
 parseVector :: Parser LispVal
 parseVector = do string "#("
                  elems <- sepBy parseExpr spaces1
                  char ')'
                  return $ Vector (listArray (0, (length elems)-1) elems)
+
+unaryOp :: (LispVal -> LispVal) -> [LispVal] -> LispVal
+unaryOp f [v] = f v
+
+symbolp, numberp, stringp, boolp, listp :: LispVal -> LispVal
+symbolp (Atom _) = Bool True
+symbolp _ = Bool False
+
+numberp (Number _) = Bool True
+numberp _          = Bool False
+
+stringp (String _) = Bool True
+stringp _          = Bool False
+
+boolp   (Bool _)   = Bool True
+boolp   _          = Bool False
+
+listp   (List _)   = Bool True
+listp   (DottedList _ _) = Bool True
+listp   _          = Bool False
 
 parseAllTheLists ::Parser LispVal
 parseAllTheLists = do char '(' >> spaces
@@ -124,13 +157,15 @@ parseUnQuote = do
 
 parseComplexNumber :: Parser LispVal
 parseComplexNumber = do realPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
-                        char '+'
+                        sign <- char '+' <|> char '-'
                         imaginaryPart <- fmap toDouble $ (try parseFloat) <|> readPlainNumber
+                        let signedImaginaryPart = case sign of
+                                                    '+' -> imaginaryPart
+                                                    '-' -> negate imaginaryPart
                         char 'i'
-                        return $ Complex (realPart :+ imaginaryPart)
+                        return $ Complex (realPart :+ signedImaginaryPart)
                             where toDouble (Float x) = x
                                   toDouble (Number x) = fromInteger x :: Double
-
 
 parseRationalNumber :: Parser LispVal
 parseRationalNumber = do numerator <- many digit
