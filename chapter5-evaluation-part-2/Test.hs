@@ -55,7 +55,7 @@ tests = TestList $ map TestCase [
           (readExpr "(cdr '(rose violet daisy buttercup))"  >>= eval)
           ,
           assertEqual
-          "eqv"
+          "eqv?"
           (Right $ Bool True)
           (readExpr "(eqv? \"lol\" \"lol\")"  >>= eval)
           ,
@@ -63,4 +63,9 @@ tests = TestList $ map TestCase [
           "cons"
           (Right $ List [Atom "pine", Atom "fir", Atom "oak", Atom "maple"])
           (readExpr "(cons 'pine '(fir oak maple))" >>= eval)
+          ,
+          assertEqual
+          "equal?"
+          (Right $ Bool True)
+          (readExpr "(equal? \"2\" 2)" >>= eval)
         ]
