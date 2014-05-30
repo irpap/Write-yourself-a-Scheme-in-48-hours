@@ -27,6 +27,11 @@ tests = TestList $ map TestCase [
           (readExpr "6/2")
           ,
           assertEqual
+          "Parsing a boolean"
+          (Bool True)
+          (readExpr "#t")
+          ,
+          assertEqual
           "parsing a list"
           (List [Number 1,Number 2,Number 3])
            (readExpr "(1 2 3)")

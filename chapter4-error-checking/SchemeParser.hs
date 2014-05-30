@@ -93,7 +93,8 @@ showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
 showError (Parser parseErr)             = "Parse error at " ++ show parseErr
 
 parseExpr :: Parser LispVal
-parseExpr =  parseString
+parseExpr =  try parseBool
+          <|> parseString
           <|> parseVector
           <|> parseAtom
           <|> parseChar
@@ -238,12 +239,15 @@ parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
-               return $ case atom of
-                           "#t" -> Bool True
-                           "#f" -> Bool False
-                           _    -> Atom atom
+               return $ Atom atom
+
+parseBool :: Parser LispVal
+parseBool = do
+    char '#'
+    (char 't' >> return (Bool True)) <|> (char 'f' >> return (Bool False))
+
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 spaces1 :: Parser ()
 spaces1 = skipMany1 space

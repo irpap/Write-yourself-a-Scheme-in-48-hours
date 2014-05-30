@@ -22,7 +22,8 @@ data LispVal = Atom String
                 deriving (Eq, Show)
 
 parseExpr :: Parser LispVal
-parseExpr = try parseComplexNumber
+parseExpr = try parseBool
+            <|> try parseComplexNumber
             <|> try parseFloat
             <|> try parseRationalNumber
             <|> try parseNumber
@@ -68,12 +69,15 @@ parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
-               return $ case atom of
-                           "#t" -> Bool True
-                           "#f" -> Bool False
-                           _    -> Atom atom
+               return $ Atom atom
+
+parseBool :: Parser LispVal
+parseBool = do
+    char '#'
+    (char 't' >> return (Bool True)) <|> (char 'f' >> return (Bool False))
+
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 spaces :: Parser ()
 spaces = skipMany1 space

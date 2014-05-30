@@ -15,6 +15,16 @@ tests = TestList $ map TestCase [
           (readExpr "33" >>=eval)
           ,
           assertEqual
+          "Parsing a boolean"
+          (Right $ Bool True)
+          (readExpr "#t" >>= eval)
+          ,
+          assertEqual
+          "list"
+          (Right $ List [ List [Number 1,Number 2,Number 3], List [Number 4, Number 5]])
+          (readExpr "((1 2 3) (4 5))" >>= eval)
+          ,
+          assertEqual
           "Type error when + is applied to string"
           (Left $ TypeMismatch "number" $ String "two")
           (readExpr "(+ 2 \"two\")" >>= eval)
@@ -68,4 +78,9 @@ tests = TestList $ map TestCase [
           "equal?"
           (Right $ Bool True)
           (readExpr "(equal? \"2\" 2)" >>= eval)
+          ,
+          assertEqual
+          "cond"
+          (Right $ Number 3)
+          (readExpr ("(cond ( (equal? 1 2) 5) (#t 3) )") >>= eval)
         ]

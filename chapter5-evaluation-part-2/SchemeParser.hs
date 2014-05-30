@@ -96,9 +96,11 @@ showError (NumArgs expected found)      = "Expected " ++ show expected
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
                                        ++ ", found " ++ show found
 showError (Parser parseErr)             = "Parse error at " ++ show parseErr
+showError (Default message)             = "Error: " ++ message
 
 parseExpr :: Parser LispVal
-parseExpr =  parseString
+parseExpr =  try parseBool
+          <|> parseString
           <|> parseVector
           <|> parseAtom
           <|> parseChar
@@ -116,13 +118,8 @@ eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _) = return val
 eval (List [Atom "quote", val]) = return val
-eval (List [Atom "if", pred, conseq, alt]) =
-     do result <- eval pred
-        case result of
-             Bool False -> eval alt
-             Bool True  -> eval conseq
-             otherwise  -> throwError $ TypeMismatch "boolean" otherwise
 eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval (List elems) = return $ List elems
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: String -> [LispVal] -> ThrowsError LispVal
@@ -164,7 +161,9 @@ primitives = [("+", numericBinop (+)),
               ("cons", cons),
               ("eq?", eqv),
               ("eqv?", eqv),
-              ("equal?", equal)
+              ("equal?", equal),
+              ("cond", cond),
+              ("if", lif)
               ]
 
 listOp :: ([LispVal] -> ThrowsError LispVal) ->[LispVal] -> ThrowsError LispVal
@@ -292,6 +291,24 @@ equal [arg1, arg2] = do
    return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
 
+lif :: [LispVal] -> ThrowsError LispVal
+lif [pred, conseq, alt] = do
+    result <- eval pred
+    case result of
+      Bool False -> eval alt
+      Bool True  -> eval conseq
+      otherwise  -> throwError $ TypeMismatch "boolean" otherwise
+
+cond :: [LispVal] -> ThrowsError LispVal
+cond [] = throwError $ Default "One of the conditions must be true"
+cond (h@(List [test, expr]) : clauses) = do
+  result <- eval test
+  case result of
+    Bool True -> eval expr
+    Bool False -> cond clauses
+    pred -> throwError $ TypeMismatch "boolean" pred
+cond (h:t) = throwError $ TypeMismatch "list" h
+
 parseAllTheLists ::Parser LispVal
 parseAllTheLists = do char '(' >> spaces
                       head <- sepEndBy parseExpr spaces1
@@ -347,12 +364,15 @@ parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
-               return $ case atom of
-                           "#t" -> Bool True
-                           "#f" -> Bool False
-                           _    -> Atom atom
+               return $ Atom atom
+
+parseBool :: Parser LispVal
+parseBool = do
+    char '#'
+    (char 't' >> return (Bool True)) <|> (char 'f' >> return (Bool False))
+
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 spaces1 :: Parser ()
 spaces1 = skipMany1 space

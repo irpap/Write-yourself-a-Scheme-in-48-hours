@@ -28,5 +28,9 @@ tests = TestList $ map TestCase [
 
     assertEqual "Parsing a string"
       (String "lol")
-      (readExpr "\"lol\"")
+      (readExpr "\"lol\""),
+
+    assertEqual "Parsing a boolean"
+      (Bool True)
+      (readExpr "#t")
     ]

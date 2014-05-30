@@ -15,6 +15,11 @@ tests = TestList $ map TestCase [
           (show $ readExpr "33")
           ,
           assertEqual
+          "Parsing a boolean"
+          "#t"
+          (show $ readExpr "#t")
+          ,
+          assertEqual
           "Parsing a complex number"
           "3.32 :+ 5.0"
           (show $ readExpr "3.32+5i")
