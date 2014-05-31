@@ -83,4 +83,11 @@ tests = TestList $ map TestCase [
           "cond"
           (Right $ Number 3)
           (readExpr ("(cond ( (equal? 1 2) 5) (#t 3) )") >>= eval)
+          ,
+          assertEqual
+          "case"
+          (Right $ Atom "composite")
+          (readExpr "(case (* 2 3)\
+                    \ ((2 3 5 7) 'prime)\
+                    \ ((1 4 6 8 9) 'composite))" >>= eval)
         ]

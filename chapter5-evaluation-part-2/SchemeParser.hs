@@ -118,6 +118,18 @@ eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _) = return val
 eval (List [Atom "quote", val]) = return val
+eval form@(List (Atom "case" : key : clauses)) =
+  if null clauses
+  then throwError $ BadSpecialForm "no true clause in case expression: " form
+  else case head clauses of
+    List (Atom "else" : exprs) -> mapM eval exprs >>= return . last
+    List ((List datums) : exprs) -> do
+      result <- eval key
+      equality <- mapM (\x -> eqv [result, x]) datums
+      if Bool True `elem` equality
+        then mapM eval exprs >>= return . last
+        else eval $ List (Atom "case" : key : tail clauses)
+    _                     -> throwError $ BadSpecialForm "ill-formed case expression: " form
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval (List elems) = return $ List elems
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
@@ -164,6 +176,7 @@ primitives = [("+", numericBinop (+)),
               ("equal?", equal),
               ("cond", cond),
               ("if", lif)
+              --("case", lcase)
               ]
 
 listOp :: ([LispVal] -> ThrowsError LispVal) ->[LispVal] -> ThrowsError LispVal
