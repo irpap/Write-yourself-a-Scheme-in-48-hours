@@ -4,6 +4,7 @@ Write Yourself a Scheme in 48 Hours
 My solutions to [this Haskell tutorial](http://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours).
 
 The final version is the one of [chapter 10](https://github.com/irpap/Write-yourself-a-Scheme-in-48-hours/tree/master/chapter10-standard-library)
+
 To run the REPL:
 ```
 cd chapter10-standard-library
