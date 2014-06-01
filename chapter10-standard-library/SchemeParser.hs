@@ -1,6 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
-module SchemeParser (LispVal (..), LispError (..), readExpr, eval) where
+module SchemeParser (LispVal (..), LispError (..), readExpr, eval, runIOThrows, primitiveBindings, liftThrows) where
 
 import Control.Monad
 import Control.Monad.Error
@@ -31,10 +31,22 @@ data LispVal = Atom String
                     body :: [LispVal], closure :: Env }
                 | IOFunc ([LispVal] -> IOThrowsError LispVal)
                 | Port Handle
-                --deriving Eq
 
 instance Show LispVal where show = showVal
-
+instance Eq LispVal where a == b = a `eq` b
+eq :: LispVal -> LispVal -> Bool
+eq (Atom a) (Atom b) = a == b
+eq (List a) (List b) = a == b
+eq (DottedList a b)(DottedList c d) = a == c && b == d
+eq (Vector a) (Vector b) = a==b
+eq (Number a) (Number b) = a==b
+eq (Float a) (Float b) = a==b
+eq (Complex a) (Complex b) = a==b
+eq (Rational a) (Rational b) = a==b
+eq (String a) (String b) = a==b
+eq (Bool a) (Bool b) = a==b
+eq (Char a) (Char b) = a==b
+eq _ _ = False
 
 data LispError = NumArgs Integer [LispVal]
                | TypeMismatch String LispVal
@@ -48,15 +60,15 @@ instance Show LispError where show = showError
 instance Error LispError where
      noMsg = Default "An error has occurred"
      strMsg = Default
---instance Eq LispError where a == b = a `eqError` b
+instance Eq LispError where a == b = a `eqError` b
 
---eqError (NumArgs a b) (NumArgs c d) = (a == c) && (b == d)
---eqError (TypeMismatch a b) (TypeMismatch c d) = (a == c) && (b == d)
---eqError (BadSpecialForm a b) (BadSpecialForm c d) = (a == c) && (b == d)
---eqError (NotFunction a b) (NotFunction c d) = (a == c) && (b == d)
---eqError (UnboundVar a b) (UnboundVar c d) = (a == c) && (b == d)
---eqError (Default a) (Default b) = (a == b)
---eqError a b  = False
+eqError (NumArgs a b) (NumArgs c d) = (a == c) && (b == d)
+eqError (TypeMismatch a b) (TypeMismatch c d) = (a == c) && (b == d)
+eqError (BadSpecialForm a b) (BadSpecialForm c d) = (a == c) && (b == d)
+eqError (NotFunction a b) (NotFunction c d) = (a == c) && (b == d)
+eqError (UnboundVar a b) (UnboundVar c d) = (a == c) && (b == d)
+eqError (Default a) (Default b) = a == b
+eqError a b  = False
 
 type ThrowsError = Either LispError
 
@@ -233,18 +245,18 @@ eval env (List (Atom "cond" : (h@(List [test, expr]) : clauses))) = do
     pred -> throwError $ TypeMismatch "boolean" pred
 eval env (l@(List (Atom "cond": []))) = throwError $ BadSpecialForm "One of the conditions must be true" l
 eval env (List (Atom "cond": a)) = throwError $ TypeMismatch "list" (head a)
---eval env form@(List (Atom "case" : key : clauses)) =
---  if null clauses
---  then throwError $ BadSpecialForm "no true clause in case expression: " form
---  else case head clauses of
---    List (Atom "else" : exprs) -> mapM (eval env) exprs >>= return . last
---    List ((List datums) : exprs) -> do
---      result <- eval env key
---      equality <-  liftThrows (mapM (\x -> eqv [result, x]) datums)
---      if Bool True `elem` equality
---        then mapM (eval env) exprs >>= return . last
---        else eval env $ List (Atom "case" : key : tail clauses)
---    _                     -> throwError $ BadSpecialForm "ill-formed case expression: " form
+eval env form@(List (Atom "case" : key : clauses)) =
+  if null clauses
+  then throwError $ BadSpecialForm "no true clause in case expression: " form
+  else case head clauses of
+    List (Atom "else" : exprs) -> liftM last (mapM (eval env) exprs)
+    List (List datums : exprs) -> do
+      result <- eval env key
+      equality <-  liftThrows (mapM (\x -> eqv [result, x]) datums)
+      if Bool True `elem` equality
+        then liftM last (mapM (eval env) exprs)
+        else eval env $ List (Atom "case" : key : tail clauses)
+    _  -> throwError $ BadSpecialForm "ill-formed case expression: " form
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
 eval env (List (Atom "define" : List (Atom var : params) : body)) =
@@ -277,6 +289,7 @@ apply (Func params varargs body closure) args =
                 Just argName -> liftIO $ bindVars env [(argName, List remainingArgs)]
                 Nothing -> return env
 apply (IOFunc func) args = func args
+apply a bs = return $ List (a:bs)
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
