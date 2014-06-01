@@ -5,7 +5,7 @@ My solutions to [this Haskell tutorial](http://en.wikibooks.org/wiki/Write_Yours
 
 The final version is the one of [chapter 10](https://github.com/irpap/Write-yourself-a-Scheme-in-48-hours/tree/master/chapter10-standard-library)
 
-To run the REPL:
+#### To run the REPL:
 ```
 cd chapter10-standard-library
 runhaskell SchemeParser.hs
@@ -19,7 +19,7 @@ Lisp>>> (map (curry + 2) '(1 2 3 4))
 Lisp>>> (filter even? '(1 2 3 4))
 (2 4)
 ```  
-Or, to run a file:
+#### Or, to run a file:
 ```
 runhaskell SchemeParser.hs <inputfile>
 ```
